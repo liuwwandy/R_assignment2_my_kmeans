@@ -1,0 +1,112 @@
+---
+title: "R Programming exercises2:mykmeans"
+output: 
+  html_document: 
+    toc: yes
+    toc_float: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, include= TRUE, collapse = TRUE)
+#默认的最大迭代次数为10
+My_kmeans <- function(data,k,max.iter=10){
+  
+  rows <- nrow(data) 
+  cols <- ncol(data) 
+  
+  within <- matrix(0,nrow=k,ncol=1) 
+  between <- 0
+  iter = 0
+  
+  #定义indexMatrix矩阵,第一列为每个数据所在的类，第二列为每个数据到其类中心的距离
+  indexMatrix <- matrix(0,nrow=rows,ncol=2) 
+  colnames(indexMatrix)<-c("category","dist_center")
+  centers <- matrix(0,nrow=k,ncol=cols) 
+  randSeveralInteger <- as.vector(sample(1:rows,size=k))
+  #通过生成随机数的方式，得到初始的聚类中心
+  #random numbers to get the inicial culster
+  for(i in 1:k){
+    indexMatrix[randSeveralInteger[i],1] <- i
+    centers[i,] <- data[randSeveralInteger[i],]
+    centers <- matrix(centers,k,cols)
+  }
+  changed = TRUE 
+  
+  while(changed){ 
+    
+    if(iter >= max.iter)
+      break
+    
+    changed=FALSE
+    
+    #对每一个数据，计算其到各个类中心的距离，并将其划分到距离最近的类
+    #to each data,calculate the distance to the center of every cluster, and classify
+    for(i in 1:rows){ 
+      initialDistance <- 10000 
+      previousCluster <- indexMatrix[i,1]
+      
+      #遍历所有的类，将该数据划分到距离最近的类
+      for(j in 1:k){ 
+        currentDistance <- (sum((data[i,]-centers[j,])^2))^0.5
+        if(currentDistance < initialDistance){
+          initialDistance <- currentDistance 
+          indexMatrix[i,1] <- j 
+          indexMatrix[i,2] <- currentDistance 
+        } 
+      }
+      
+      #如果该数据所属的类发生了变化，则将changed设为TRUE，算法继续
+      if(previousCluster!=indexMatrix[i,1]) 
+        changed=TRUE
+    }
+    
+    #重新计算类中心
+    for(m in 1:k){
+      clusterMatrix <- data[indexMatrix[,1]==m,] 
+      clusterMatrix <- as.matrix(clusterMatrix)
+      if(nrow(clusterMatrix)>0){ 
+        centers[m,] <- colMeans(clusterMatrix) 
+      } 
+      else{
+        centers[m,] <- centers[m,] 
+      }    
+    }
+    iter = (iter+1)
+  }
+  index<-as.data.frame(indexMatrix)
+  center_id<-matrix(centers,ncol=cols)
+  clustermatrix<-as.data.frame(clusterMatrix)
+  outcome=list(index,center_id,clustermatrix)
+  return(outcome)
+}
+
+set.seed(100376272) 
+a=c(rnorm(60,5,1), rnorm(50,15,1), rnorm(60,2,1), rnorm(60,3,1), rnorm(50,13,1)) 
+b=c(rnorm(60,5,1), rnorm(50,26,1), rnorm(60,20,1), rnorm(60,30,1), rnorm(50,13,1)) 
+x=data.frame(a,b)
+label0<-c(rep(1,60),rep(2,50),rep(3,60),rep(4,60),rep(5,50))
+
+min.max.norm <- function(x){
+  ((x-min(x))/(max(x)-min(x)))
+}
+data <- apply(x,2,min.max.norm)
+data
+
+mykmeans=My_kmeans(x,5)
+mykmeans
+
+centerid<-mykmeans[[2]]
+centerid
+unlistid<-unlist(centerid)
+unlistid
+clusterid<-matrix(unlistid,ncol=2)
+clusterid
+clusterid<-data.frame(clusterid)
+
+library(ggplot2)
+ggplot()+geom_point(x,mapping=aes(x=a,y=b,color=as.factor(label0)))+
+geom_point(clusterid,mapping=aes(x=X1,y=X2))
+
+ 
+```
